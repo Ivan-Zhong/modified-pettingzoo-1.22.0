@@ -58,6 +58,7 @@ simple_spread_v2.env(N=3, local_ratio=0.5, max_cycles=25, continuous_actions=Fal
 
 import numpy as np
 from gymnasium.utils import EzPickle
+from gymnasium import spaces
 
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 
@@ -92,7 +93,28 @@ class raw_env(SimpleEnv, EzPickle):
             local_ratio=local_ratio,
         )
         self.metadata["name"] = "simple_spread_v2"
+        state_dim = N * (self.world.dim_p * 3 + self.world.dim_c)
+        self.state_space = spaces.Box(
+            low=-np.float32(np.inf),
+            high=+np.float32(np.inf),
+            shape=(state_dim,),
+            dtype=np.float32,
+        )
 
+    def state(self):
+        # landmark positions
+        landmark_pos = []
+        for landmark in self.world.landmarks:
+            landmark_pos.append(landmark.state.p_pos)
+        # agent positions, velocities, and comm
+        agent_pos = []
+        agent_vel = []
+        comm = []
+        for agent in self.world.agents:
+            agent_pos.append(agent.state.p_pos)
+            agent_vel.append(agent.state.p_vel)
+            comm.append(agent.state.c)
+        return np.concatenate(landmark_pos + agent_pos + agent_vel + comm)
 
 env = make_env(raw_env)
 parallel_env = parallel_wrapper_fn(env)
